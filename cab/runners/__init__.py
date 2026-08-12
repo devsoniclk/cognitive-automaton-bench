@@ -12,9 +12,10 @@ import httpx
 class LLMRunner:
     """Unified interface for calling LLMs across providers."""
 
-    def __init__(self, model: str, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, model: str, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs):
         self.model = model
         self.api_key = api_key
+        self.base_url = base_url
         self.kwargs = kwargs
         self.total_tokens = 0
         self.total_calls = 0
@@ -45,10 +46,15 @@ class LLMRunner:
             raise ImportError("pip install openai")
 
         api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
+        base_url = self.base_url or os.environ.get("OPENAI_BASE_URL")
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not set")
+            raise ValueError("OPENAI_API_KEY not set (pass --api-key or set env var)")
 
-        client = OpenAI(api_key=api_key)
+        kwargs = {}
+        if base_url:
+            kwargs["base_url"] = base_url
+
+        client = OpenAI(api_key=api_key, **kwargs)
         response = client.chat.completions.create(
             model=self.model,
             messages=[
@@ -60,7 +66,13 @@ class LLMRunner:
         )
         self.total_tokens += response.usage.total_tokens if response.usage else 0
         self.total_calls += 1
-        return response.choices[0].message.content or ""
+        content = response.choices[0].message.content or ""
+        # Reasoning models may put output in reasoning_content with empty content
+        if not content and hasattr(response.choices[0].message, "reasoning_content"):
+            reasoning = response.choices[0].message.reasoning_content or ""
+            if reasoning:
+                content = reasoning
+        return content
 
     def _call_anthropic(self, system_prompt: str, user_prompt: str) -> str:
         try:

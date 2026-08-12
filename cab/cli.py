@@ -28,10 +28,11 @@ def main():
 @click.option("--benchmark", "-b", help="Run a single benchmark by ID (overrides --suite)")
 @click.option("--api-key", envvar="OPENAI_API_KEY", help="API key for the LLM provider")
 @click.option("--output-dir", "-o", default="results", help="Output directory for results")
+@click.option("--base-url", envvar="XIAOMI_BASE_URL", help="Base URL for OpenAI-compatible API")
 @click.option("--temperature", "-t", default=0.7, type=float, help="LLM temperature")
 @click.option("--max-tokens", default=2048, type=int, help="Max tokens per LLM call")
 @click.option("--dry-run", is_flag=True, help="Print benchmarks that would run without executing")
-def run(model, suite, benchmark, api_key, output_dir, temperature, max_tokens, dry_run):
+def run(model, suite, benchmark, api_key, base_url, output_dir, temperature, max_tokens, dry_run):
     """Run benchmarks against a model."""
     from cab.benchmarks import BENCHMARKS, SUITES
     from cab.runners import LLMRunner
@@ -70,6 +71,7 @@ def run(model, suite, benchmark, api_key, output_dir, temperature, max_tokens, d
     runner = LLMRunner(
         model=model,
         api_key=api_key,
+        base_url=base_url,
         temperature=temperature,
         max_tokens=max_tokens,
     )
